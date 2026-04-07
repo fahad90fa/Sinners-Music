@@ -2,8 +2,13 @@ import discord
 from discord.ext import commands
 from utils.database import db
 from utils.embeds import embeds
+import datetime
 import os
 import platform
+import resource
+import shutil
+import socket
+import sys
 
 OWNER_ID = 1170979888019292261
 
@@ -102,30 +107,111 @@ class Admin(commands.Cog):
         command_count = len(self.bot.commands)
         uptime_delta = discord.utils.utcnow() - getattr(self.bot, 'launch_time', discord.utils.utcnow())
         uptime_text = str(uptime_delta).split('.')[0]
+        process_memory_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        process_memory_mb = round(process_memory_kb / 1024, 2)
+        disk_usage = shutil.disk_usage(os.getcwd())
+        disk_total_gb = round(disk_usage.total / (1024 ** 3), 2)
+        disk_used_gb = round(disk_usage.used / (1024 ** 3), 2)
+        disk_free_gb = round(disk_usage.free / (1024 ** 3), 2)
+        boot_time = None
+        try:
+            with open('/proc/uptime', 'r') as f:
+                system_uptime_seconds = float(f.read().split()[0])
+            boot_time = datetime.datetime.now() - datetime.timedelta(seconds=system_uptime_seconds)
+            system_uptime_text = str(datetime.timedelta(seconds=int(system_uptime_seconds)))
+        except (FileNotFoundError, ValueError, OSError):
+            system_uptime_text = "Unavailable"
+
+        try:
+            load_average = ", ".join(f"{value:.2f}" for value in os.getloadavg())
+        except (AttributeError, OSError):
+            load_average = "Unavailable"
 
         embed = discord.Embed(
             title="🏓 ZeroDay Tools Status",
-            description="Advanced runtime snapshot for the bot.",
+            description="Advanced runtime and system diagnostics for the bot.",
             color=0x00ff9d,
             timestamp=discord.utils.utcnow()
         )
 
-        embed.add_field(name="Latency", value=f"`{latency_ms} ms`", inline=True)
-        embed.add_field(name="Servers", value=f"`{guild_count}`", inline=True)
-        embed.add_field(name="Users", value=f"`{user_count}`", inline=True)
-        embed.add_field(name="Commands", value=f"`{command_count}`", inline=True)
-        embed.add_field(name="Uptime", value=f"`{uptime_text}`", inline=True)
-        embed.add_field(name="Python", value=f"`{platform.python_version()}`", inline=True)
-        embed.add_field(name="discord.py", value=f"`{discord.__version__}`", inline=True)
-        embed.add_field(name="Platform", value=f"`{platform.system()} {platform.release()}`", inline=True)
-        embed.add_field(name="PID", value=f"`{os.getpid()}`", inline=True)
+        embed.add_field(
+            name="Bot Runtime",
+            value=(
+                f"> **Latency:** `{latency_ms} ms`\n"
+                f"> **Uptime:** `{uptime_text}`\n"
+                f"> **PID:** `{os.getpid()}`\n"
+                f"> **Commands:** `{command_count}`"
+            ),
+            inline=False
+        )
 
-        if guild_count:
-            embed.add_field(
-                name="Average Users / Server",
-                value=f"`{round(user_count / guild_count, 2)}`",
-                inline=True
-            )
+        embed.add_field(
+            name="Discord Stats",
+            value=(
+                f"> **Servers:** `{guild_count}`\n"
+                f"> **Users:** `{user_count}`\n"
+                f"> **Current Guild Users:** `{len(ctx.guild.members)}`\n"
+                f"> **Avg Users / Server:** `{round(user_count / guild_count, 2) if guild_count else 0}`"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="System Details",
+            value=(
+                f"> **Host:** `{socket.gethostname()}`\n"
+                f"> **OS:** `{platform.system()} {platform.release()}`\n"
+                f"> **Kernel:** `{platform.version()[:45]}`\n"
+                f"> **Arch:** `{platform.machine()}`"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="Runtime Stack",
+            value=(
+                f"> **Python:** `{platform.python_version()}`\n"
+                f"> **discord.py:** `{discord.__version__}`\n"
+                f"> **Executable:** `{sys.executable}`\n"
+                f"> **Working Dir:** `{os.getcwd()}`"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="Resource Usage",
+            value=(
+                f"> **CPU Cores:** `{os.cpu_count()}`\n"
+                f"> **Load Avg:** `{load_average}`\n"
+                f"> **Process RAM:** `{process_memory_mb} MB`\n"
+                f"> **Open FDs:** `{len(os.listdir('/proc/self/fd')) if os.path.exists('/proc/self/fd') else 'Unavailable'}`"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="Storage",
+            value=(
+                f"> **Disk Total:** `{disk_total_gb} GB`\n"
+                f"> **Disk Used:** `{disk_used_gb} GB`\n"
+                f"> **Disk Free:** `{disk_free_gb} GB`\n"
+                f"> **CWD Exists:** `{'Yes' if os.path.exists(os.getcwd()) else 'No'}`"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="Environment",
+            value=(
+                f"> **System Uptime:** `{system_uptime_text}`\n"
+                f"> **Boot Time:** `{boot_time.strftime('%Y-%m-%d %H:%M:%S') if boot_time else 'Unavailable'}`\n"
+                f"> **TZ:** `{os.environ.get('TZ', 'System Default')}`\n"
+                f"> **Token Loaded:** `{'Yes' if bool(os.getenv('DISCORD_TOKEN')) else 'No'}`"
+            ),
+            inline=False
+        )
+
+        embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else discord.Embed.Empty)
 
         embed.set_footer(text="ZeroDay Tools")
         await ctx.send(embed=embed)
