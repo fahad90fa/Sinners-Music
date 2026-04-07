@@ -1,6 +1,7 @@
-
 discord.py==2.3.2
 python-dotenv==1.0.0
 aiohttp==3.9.1
 Pillow==12.1.0
+beautifulsoup4==4.12.3
+lxml
 audioop-lts; python_version >= "3.13"
