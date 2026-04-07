@@ -20,12 +20,18 @@ class WelcomeSystem(commands.Cog):
     def load_config(self):
         try:
             with open(self.config_file, 'r') as f:
-                return json.load(f)
+                config = json.load(f)
         except FileNotFoundError:
-            default = {"welcome_channel": None}
+            default = {"welcome_channel": None, "welcome_style": "line"}
             with open(self.config_file, 'w') as f:
                 json.dump(default, f, indent=4)
             return default
+
+        if 'welcome_style' not in config:
+            config['welcome_style'] = 'line'
+            self.save_config(config)
+
+        return config
 
     def save_config(self, config):
         with open(self.config_file, 'w') as f:
@@ -193,7 +199,7 @@ class WelcomeSystem(commands.Cog):
             status = "❌ DISABLED"
             channel_name = "Not configured"
 
-        style = config.get('welcome_style', 'main')
+        style = config.get('welcome_style', 'line')
 
         stats = (
             "```\n"
@@ -294,9 +300,11 @@ class WelcomeSystem(commands.Cog):
 
     async def send_welcome_message(self, channel, member, is_test=False):
         config = self.load_config()
-        style = config.get('welcome_style', 'main')
+        style = config.get('welcome_style', 'line')
 
-        if style == 'compact':
+        if style == 'line':
+            await self.send_line_welcome(channel, member, is_test)
+        elif style == 'compact':
             await self.send_compact_welcome(channel, member, is_test)
         elif style == 'hacker':
             await self.send_hacker_welcome(channel, member, is_test)
@@ -307,7 +315,13 @@ class WelcomeSystem(commands.Cog):
         elif style == 'cyberpunk':
             await self.send_cyberpunk_welcome(channel, member, is_test)
         else:
-            await self.send_main_welcome(channel, member, is_test)
+            await self.send_line_welcome(channel, member, is_test)
+
+    async def send_line_welcome(self, channel, member, is_test=False):
+        prefix = "[TEST] " if is_test else ""
+        await channel.send(
+            f"{prefix}Welcome {member.mention} to **ZeroDay Tools**. Read `#rules`, browse the store, and use `!ticket` if you need help."
+        )
 
     # --------------------------------------------------------
     #                 STYLE 1 - MAIN WELCOME
