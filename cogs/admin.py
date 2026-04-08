@@ -217,9 +217,9 @@ class Admin(commands.Cog):
         embed.set_footer(text="ZeroDay Tools")
         await ctx.send(embed=embed)
 
-    @commands.command(name='purge')
+    @commands.command(name='ownerpurge', aliases=['opurge'])
     async def purge_command(self, ctx, amount: int):
-        """Owner-only bulk delete for 0-300 messages"""
+        """Owner-only bulk delete for 0-300 messages."""
         if ctx.author.id != OWNER_ID:
             await ctx.send("❌ This command is owner-only.")
             return

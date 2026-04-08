@@ -378,7 +378,7 @@ class EmbedBuilder:
             name="🛍️ **Shopping**",
             value=(
                 "> `!shop` - View available shop items\n"
-                "> `!buy <item_id>` - Purchase shop item\n"
+                "> `!buyitem <item_id>` - Purchase shop item\n"
                 "> `!sell <item_id>` - Sell item (50% value)\n"
                 "> `!inventory [@user]` - View inventory\n"
                 "> `!use <item_id>` - Use an item"

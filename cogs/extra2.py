@@ -648,11 +648,11 @@ class AdvancedCommandsPart2(commands.Cog):
                 inline=False
             )
         
-        embed.set_footer(text="Use !buy <item_id> to purchase")
+        embed.set_footer(text="Use !buyitem <item_id> to purchase")
         
         await ctx.send(embed=embed)
     
-    @commands.command(name='buy')
+    @commands.command(name='buyitem', aliases=['shopbuy'])
     async def buy_item(self, ctx, item_id: str):
         """Buy item from shop"""
         item_id = item_id.lower()
