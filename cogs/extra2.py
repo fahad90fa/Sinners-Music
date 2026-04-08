@@ -76,6 +76,41 @@ class AdvancedCommandsPart2(commands.Cog):
                     data = await resp.read()
                     return Image.open(io.BytesIO(data)).convert('RGBA')
         return None
+
+    def _command_usage(self, ctx):
+        signature = ctx.command.signature.strip() if ctx.command and ctx.command.signature else ""
+        return f"!{ctx.command.qualified_name} {signature}".strip() if ctx.command else "!help"
+
+    async def _send_command_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send("```\n❌ You don't have permission to use this command.\n```")
+            return
+        if isinstance(error, commands.BotMissingPermissions):
+            perms = ", ".join(error.missing_permissions)
+            await ctx.send(f"```\n❌ I need these permissions: {perms}\n```")
+            return
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send(
+                "```\n"
+                f"❌ Missing argument: {error.param.name}\n"
+                f"Usage: {self._command_usage(ctx)}\n"
+                "```"
+            )
+            return
+        if isinstance(error, (commands.BadArgument, commands.BadUnionArgument)):
+            await ctx.send(
+                "```\n"
+                "❌ Invalid argument provided.\n"
+                f"Usage: {self._command_usage(ctx)}\n"
+                "```"
+            )
+            return
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(
+                f"```\n❌ This command is on cooldown. Try again in {error.retry_after:.1f}s.\n```"
+            )
+            return
+        raise error
     
     # ============================================================
     #              MORE IMAGE MANIPULATION COMMANDS
@@ -2300,6 +2335,11 @@ class AdvancedCommandsPart2(commands.Cog):
             
         except asyncio.TimeoutError:
             pass
+
+    async def cog_command_error(self, ctx, error):
+        if getattr(ctx.command, "on_error", None):
+            return
+        await self._send_command_error(ctx, error)
 
 
 async def setup(bot):
