@@ -20,11 +20,11 @@
     "rules_message_id": 1491000491260248135,
     "lavalink_nodes": [
         {
-            "identifier": "local-v4",
-            "host": "localhost",
-            "port": 2333,
+            "identifier": "railway-v4",
+            "host": "lavalink-production-5b65.up.railway.app",
+            "port": 443,
             "password": "fahad123",
-            "https": false
+            "https": true
         }
     ]
 }
