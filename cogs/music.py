@@ -138,6 +138,8 @@ class Music(commands.Cog):
         self.queues: Dict[int, Deque[wavelink.Playable]] = {}
         self.loop_mode: Dict[int, str] = {}
         self.control_messages: Dict[int, Tuple[int, int]] = {}
+        self.last_voice_channel: Dict[int, int] = {}
+        self.reconnect_tasks: Dict[int, asyncio.Task] = {}
 
     def _get_queue(self, guild_id: int) -> Deque[wavelink.Playable]:
         return self.queues.setdefault(guild_id, deque())
@@ -234,6 +236,7 @@ class Music(commands.Cog):
             return None
         player.autoplay = wavelink.AutoPlayMode.disabled
         player.text_channel = ctx.channel
+        self.last_voice_channel[ctx.guild.id] = ctx.author.voice.channel.id
         return player
 
     async def _start_next(self, player: wavelink.Player) -> None:
@@ -243,7 +246,10 @@ class Music(commands.Cog):
         if not queue:
             return
         track = queue.popleft()
-        await player.play(track)
+        try:
+            await player.play(track)
+        except Exception as e:
+            await self._log(f"Play failed in guild {player.guild.id}: {e}")
 
     async def _refresh_now_playing_message(self, guild: discord.Guild) -> None:
         info = self.control_messages.get(guild.id)
@@ -378,6 +384,35 @@ class Music(commands.Cog):
             return
         message = await channel.send(embed=embed, view=view)
         self.control_messages[guild.id] = (channel.id, message.id)
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+        if not member or not member.guild:
+            return
+        if member.id != self.bot.user.id:
+            return
+        guild_id = member.guild.id
+
+        if before.channel and not after.channel:
+            await self._log(f"Voice disconnect in guild {guild_id} from {before.channel.id}")
+            queue = self._get_queue(guild_id)
+            if queue:
+                if guild_id not in self.reconnect_tasks or self.reconnect_tasks[guild_id].done():
+                    self.reconnect_tasks[guild_id] = asyncio.create_task(self._attempt_reconnect(member.guild, before.channel.id))
+        elif after.channel:
+            await self._log(f"Voice connected in guild {guild_id} to {after.channel.id}")
+
+    async def _attempt_reconnect(self, guild: discord.Guild, channel_id: int):
+        await asyncio.sleep(2)
+        channel = guild.get_channel(channel_id)
+        if not channel or not isinstance(channel, discord.VoiceChannel):
+            await self._log(f"Reconnect failed: channel {channel_id} not found.")
+            return
+        try:
+            await channel.connect(cls=wavelink.Player)
+            await self._log(f"Reconnected to voice channel {channel_id}.")
+        except Exception as e:
+            await self._log(f"Reconnect error in guild {guild.id}: {e}")
 
     @commands.command(name="join", aliases=["summon"])
     async def join(self, ctx: commands.Context):
