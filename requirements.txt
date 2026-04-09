@@ -4,3 +4,4 @@ aiohttp==3.9.5
 Pillow==10.4.0
 qrcode==8.2
 audioop-lts; python_version >= "3.13"
+wavelink==2.6.4

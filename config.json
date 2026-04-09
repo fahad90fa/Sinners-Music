@@ -17,5 +17,35 @@
     "embed_color": "0x00ff9d",
     "footer_text": "ZeroDay Tools",
     "thumbnail_url": "https://i.imgur.com/your_logo.png",
-    "rules_message_id": 1491000491260248135
+    "rules_message_id": 1491000491260248135,
+    "lavalink_nodes": [
+        {
+            "identifier": "serenetia-v4",
+            "host": "lavalinkv4.serenetia.com",
+            "port": 443,
+            "password": "https://seretia.link/discord",
+            "https": true
+        },
+        {
+            "identifier": "jirayu-v4",
+            "host": "lavalink.jirayu.net",
+            "port": 443,
+            "password": "youshallnotpass",
+            "https": true
+        },
+        {
+            "identifier": "millohost-v4",
+            "host": "lava-v4.millohost.my.id",
+            "port": 443,
+            "password": "https://discord.gg/mjS5J2K3ep",
+            "https": true
+        },
+        {
+            "identifier": "trinium-v4",
+            "host": "lavalink-v4.triniumhost.com",
+            "port": 443,
+            "password": "free",
+            "https": true
+        }
+    ]
 }
