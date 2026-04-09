@@ -672,6 +672,40 @@ class Music(commands.Cog):
             )
         await ctx.send("```\n" + "\n".join(lines) + "\n```")
 
+    @commands.command(name="voicecheck")
+    async def voicecheck(self, ctx: commands.Context):
+        """Diagnose voice connection issues."""
+        if not ctx.author.voice or not ctx.author.voice.channel:
+            await ctx.send("```\n❌ You are not in a voice channel.\n```")
+            return
+
+        channel = ctx.author.voice.channel
+        me = ctx.guild.me
+        perms = channel.permissions_for(me) if me else None
+        is_stage = isinstance(channel, discord.StageChannel)
+
+        opus_loaded = discord.opus.is_loaded()
+
+        lines = [
+            f"Channel: {channel.name} ({channel.id})",
+            f"Type: {'Stage' if is_stage else 'Voice'}",
+            f"Bitrate: {getattr(channel, 'bitrate', 'N/A')}",
+            f"User Limit: {getattr(channel, 'user_limit', 'N/A')}",
+            f"Bot Muted: {me.voice.self_mute if me and me.voice else 'N/A'}",
+            f"Bot Deafened: {me.voice.self_deaf if me and me.voice else 'N/A'}",
+            f"Opus Loaded: {opus_loaded}",
+        ]
+
+        if perms:
+            lines.extend([
+                f"Connect: {perms.connect}",
+                f"Speak: {perms.speak}",
+                f"Use Voice Activity: {perms.use_voice_activation}",
+                f"Request To Speak: {perms.request_to_speak if is_stage else 'N/A'}",
+            ])
+
+        await ctx.send("```\n" + "\n".join(str(l) for l in lines) + "\n```")
+
     async def cog_command_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(
