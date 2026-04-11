@@ -101,7 +101,7 @@ export async function setupLavalink(client, config) {
     },
     autoSkip: true,
     playerOptions: {
-      defaultSearchPlatform: "scsearch",
+      defaultSearchPlatform: "spsearch",
       applyVolumeAsFilter: false,
       volumeDecrementer: 0.75,
     },

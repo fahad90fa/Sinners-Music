@@ -28,14 +28,9 @@ function buildSearchQuery(rawQuery) {
 
   const lower = query.toLowerCase();
   if (lower.includes("open.spotify.com/") || lower.startsWith("spotify:")) {
-    return { query, source: "spotify" };
+    return { query, source: "spsearch" };
   }
-
-  if (lower.includes("soundcloud.com/")) {
-    return { query, source: "soundcloud" };
-  }
-
-  return { query };
+  return { query, source: "spsearch" };
 }
 
 function formatDuration(ms) {
