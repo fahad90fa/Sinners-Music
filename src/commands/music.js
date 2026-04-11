@@ -17,6 +17,27 @@ function isTimeoutError(error) {
   return text.includes("timeout") || text.includes("aborted");
 }
 
+function isSpotifyUnsupportedError(error) {
+  const text = String(error?.message || error || "").toLowerCase();
+  return text.includes("spotify") && text.includes("not 'spotify' enabled");
+}
+
+function buildSearchQuery(rawQuery) {
+  const query = String(rawQuery || "").trim();
+  if (!query) return { query };
+
+  const lower = query.toLowerCase();
+  if (lower.includes("open.spotify.com/") || lower.startsWith("spotify:")) {
+    return { query, source: "spotify" };
+  }
+
+  if (lower.includes("soundcloud.com/")) {
+    return { query, source: "soundcloud" };
+  }
+
+  return { query };
+}
+
 function formatDuration(ms) {
   if (!Number.isFinite(ms) || ms < 0) return "Unknown";
   const total = Math.floor(ms / 1000);
@@ -309,7 +330,7 @@ export const command = {
           if (player.node?.options?.id !== nodeId) {
             await player.moveNode(nodeId);
           }
-          result = await player.search({ query }, message.author);
+          result = await player.search(buildSearchQuery(query), message.author);
           if (result?.tracks?.length) break;
         } catch (error) {
           lastError = error;
@@ -320,6 +341,10 @@ export const command = {
       if (!result) {
         if (isTimeoutError(lastError)) {
           await message.channel.send("```\n❌ Lavalink search timed out on all nodes. Try again in a few seconds.\n```");
+        } else if (isSpotifyUnsupportedError(lastError)) {
+          await message.channel.send(
+            "```\n❌ Spotify links are not supported on this Lavalink node.\nUse the track name instead, for example: !play artist - song name\n```"
+          );
         } else {
           await message.channel.send(`\`\`\`\n❌ Search failed: ${lastError?.message || "unknown error"}\n\`\`\``);
         }
@@ -529,7 +554,7 @@ export const command = {
         await message.channel.send("```\n❌ Usage: !suggest <prompt>\n```");
         return;
       }
-      const res = await player.search({ query: prompt }, message.author).catch(() => null);
+      const res = await player.search(buildSearchQuery(prompt), message.author).catch(() => null);
       if (!res?.tracks?.length) {
         await message.channel.send("```\n❌ No suggestions found.\n```");
         return;
