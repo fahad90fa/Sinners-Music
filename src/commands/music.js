@@ -84,8 +84,9 @@ function buildAiQuery(title, author, vibe) {
 }
 
 async function ensureAiQueue(player, requester, limit = 3) {
-  const title = String(player.queue.current?.title || player.queue.current?.info?.title || lastTrackTitle.get(player.guildId) || "");
-  const author = String(player.queue.current?.info?.author || lastTrackAuthor.get(player.guildId) || "");
+  const currentTrack = player.queue.current;
+  const title = String(currentTrack?.title || currentTrack?.info?.title || lastTrackTitle.get(player.guildId) || "");
+  const author = String(currentTrack?.info?.author || lastTrackAuthor.get(player.guildId) || "");
   const vibe = vibeState.get(player.guildId);
   const query = buildAiQuery(title, author, vibe);
   if (!query) return;
@@ -94,7 +95,7 @@ async function ensureAiQueue(player, requester, limit = 3) {
   if (!result?.tracks?.length) return;
 
   const existing = new Set(
-    [player.queue.current, ...(player.queue.tracks || [])]
+    [currentTrack, ...(player.queue.tracks || [])]
       .filter(Boolean)
       .map((track) => normalizeText(track?.title || track?.info?.title))
   );
@@ -175,54 +176,111 @@ function buildButtons(player) {
 
 function buildNowPlayingEmbed(player) {
   const track = player.queue.current;
-  
+  const ANIMATED_SINGER = "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHU4YnZ6bTR6NTR6NTR6NTR6NTR6NTR6NTR6NTR6NTR6NTR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxPzUfS9mVO/giphy.gif";
+  const LIVE_ICON = "https://cdn.discordapp.com/emojis/1041113066373152828.gif";
+
   const embed = new EmbedBuilder()
     .setColor(0x00ff9d)
     .setTimestamp();
 
   if (!track) {
     embed
-      .setAuthor({ name: "Music Player | Idle", iconURL: "https://cdn.discordapp.com/emojis/1041113066373152828.gif" })
+      .setAuthor({ name: "SINNERS MUSIC | SYSTEM IDLE", iconURL: LIVE_ICON })
       .setDescription(
-        "🎧 **The stage is empty!**\n\n" +
-        "Join a voice channel and use `!play <song name/url>` to start the music. " +
-        "I support high-quality Spotify and YouTube streams."
+        "```ansi\n" +
+        "\u001b[1;32m┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓\n" +
+        "\u001b[1;32m┃        \u001b[1;37m🎧  PLAYER STATUS: \u001b[1;33mSTANDBY\u001b[1;32m         ┃\n" +
+        "\u001b[1;32m┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
+        "```\n" +
+        "**Welcome to the next generation of audio.**\n" +
+        "Use `!play` to ignite the stage.\n\n" +
+        "**━━━━━━━━━━━━━━━━━━━━━━━━━━━━━**"
       )
       .addFields(
-        { name: "✨ Status", value: "```\nWaiting for tracks...\n```", inline: false },
-        { name: "📡 Autoplay", value: autoplayState.get(player.guildId) === true ? "✅ Enabled" : "❌ Disabled", inline: true },
-        { name: "🤖 AI Mode", value: aiModeState.get(player.guildId) === true ? "✅ Active" : "❌ Standby", inline: true }
-      );
+        { name: "📡 NETWORK", value: "```yaml\nStatus: Online\nLatency: Stable\n```", inline: true },
+        { name: "🤖 INTELLIGENCE", value: `\`\`\`yaml\nAI: ${aiModeState.get(player.guildId) ? "Enabled" : "Disabled"}\nAutoplay: ${autoplayState.get(player.guildId) ? "On" : "Off"}\n\`\`\``, inline: true }
+      )
+      .setImage(ANIMATED_SINGER)
+      .setFooter({ text: "SYSTEM READY • SINNERS MUSIC V2", iconURL: LIVE_ICON });
     return embed;
   }
 
   const title = track.title || track.info?.title || "Unknown Track";
   const author = track.info?.author || "Unknown Artist";
-  const duration = formatDuration(track.duration ?? track.info?.duration ?? track.info?.length);
-  const position = formatDuration(player.position ?? 0);
-  const bar = progressBar(player.position ?? 0, track.duration ?? track.info?.duration ?? track.info?.length, 18);
+  const durationMs = track.duration ?? track.info?.duration ?? track.info?.length ?? 0;
+  const duration = formatDuration(durationMs);
+  const positionMs = player.position ?? 0;
+  const position = formatDuration(positionMs);
+  const bar = progressBar(positionMs, durationMs, 22);
   const volume = player.volume ?? 100;
-  const requester = track.requester?.id ? `<@${track.requester.id}>` : "Unknown";
+  const requester = track.requester?.id ? `<@${track.requester.id}>` : "System";
   const artwork = track.info?.artworkUrl || track.info?.thumbnail || null;
   const nextUp = player.queue.tracks?.[0];
-  const loopMode = player.repeatMode || "off";
+  const loopMode = (player.repeatMode || "off").toUpperCase();
+  const source = sourceLabel(track.info?.sourceName || "unknown");
+  const nodeName = player.node?.options?.id || "Primary";
 
   embed
-    .setAuthor({ name: "Now Playing", iconURL: "https://cdn.discordapp.com/emojis/1041113066373152828.gif" })
-    .setTitle(shorten(title, 256))
+    .setAuthor({ name: "NOW BROADCASTING • SINNERS MUSIC", iconURL: LIVE_ICON })
+    .setTitle(`🎧 ${shorten(title, 80)}`)
     .setURL(track.uri || null)
-    .setDescription(`by **${shorten(author, 100)}**`)
+    .setDescription(
+      "```ansi\n" +
+      `\u001b[1;32mArtist  : \u001b[1;37m${shorten(author, 40)}\n` +
+      `\u001b[1;32mSource  : \u001b[1;37m${source}\n` +
+      `\u001b[1;32mNode    : \u001b[1;37m${nodeName}\n` +
+      "```"
+    )
     .addFields(
-      { name: "📊 Progress", value: `\`${position}\` ${bar} \`${duration}\``, inline: false },
-      { name: "👤 Requested By", value: requester, inline: true },
-      { name: "🔊 Volume", value: `\`${volume}%\``, inline: true },
-      { name: "🔄 Loop", value: `\`${loopMode.toUpperCase()}\``, inline: true },
-      { name: "🎵 Next Up", value: nextUp ? `**${shorten(nextUp.title || nextUp.info?.title, 40)}**` : "*Queue is empty*", inline: false }
-    );
+      { 
+        name: "🎵 **AUDIO PROGRESSION**", 
+        value: `**${position}** ${bar} **${duration}**`, 
+        inline: false 
+      },
+      { 
+        name: "👤 **REQUESTER**", 
+        value: requester, 
+        inline: true 
+      },
+      { 
+        name: "🔊 **VOLUME**", 
+        value: `\`${volume}%\``, 
+        inline: true 
+      },
+      { 
+        name: "🔄 **LOOPING**", 
+        value: `\`${loopMode}\``, 
+        inline: true 
+      },
+      { 
+        name: "📻 **AUTOPLAY**", 
+        value: autoplayState.get(player.guildId) === true ? "✅ `ENABLED`" : "❌ `DISABLED`", 
+        inline: true 
+      },
+      { 
+        name: "🤖 **AI ENGINE**", 
+        value: aiModeState.get(player.guildId) === true ? "✅ `ACTIVE`" : "❌ `OFFLINE`", 
+        inline: true 
+      },
+      { 
+        name: "📈 **QUEUE**", 
+        value: `\`${player.queue.tracks.length} tracks left\``, 
+        inline: true 
+      },
+      { 
+        name: "⏭️ **UP NEXT**", 
+        value: nextUp ? `\`${shorten(nextUp.title || nextUp.info?.title, 60)}\`` : "*The stage ends here.*", 
+        inline: false 
+      }
+    )
+    .setImage(ANIMATED_SINGER);
 
   if (artwork) embed.setThumbnail(artwork);
   
-  embed.setFooter({ text: "Professional Audio System • Spotify & YouTube Powered", iconURL: "https://cdn.discordapp.com/emojis/1041113066373152828.gif" });
+  embed.setFooter({ 
+    text: `Powered by Sinners Music • High Fidelity Audio • Shard #0`, 
+    iconURL: LIVE_ICON 
+  });
   
   return embed;
 }
@@ -660,13 +718,14 @@ export async function register(client) {
   });
 
   manager.on("queueEnd", async (player) => {
+    const lastRequester = player.queue.current?.requester || player.queue.previous?.[0]?.requester || null;
     if (aiModeState.get(player.guildId) === true) {
-      await ensureAiQueue(player, player.queue.current?.requester ?? null, 3);
+      await ensureAiQueue(player, lastRequester, 3);
       if (!player.playing && !player.paused && player.queue.tracks?.length) {
         await player.play();
       }
     } else if (autoplayState.get(player.guildId) === true) {
-      await ensureAiQueue(player, player.queue.current?.requester ?? null, 1);
+      await ensureAiQueue(player, lastRequester, 1);
       if (!player.playing && !player.paused && player.queue.tracks?.length) {
         await player.play();
       }
