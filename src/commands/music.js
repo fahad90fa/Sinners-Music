@@ -561,15 +561,33 @@ export const command = {
     }
 
     if (cmd === "nodes") {
-      const nodes = manager.nodeManager?.nodes ?? [];
+      const nodes = Array.from(manager.nodeManager?.nodes?.values() ?? []);
       if (!nodes.length) {
         await message.channel.send({ embeds: [new EmbedBuilder().setColor(0xff0000).setDescription("❌ No music nodes connected.")] });
         return;
       }
+
       const embed = new EmbedBuilder()
         .setColor(0x00ff9d)
-        .setTitle("📡 Music Nodes Status")
-        .setDescription(nodes.map((n) => `\`${n.options.id}\` • ${n.options.host} • ${n.connected ? "✅ Online" : "❌ Offline"}`).join("\n"));
+        .setTitle("📡 Music Nodes Detailed Status")
+        .setTimestamp();
+
+      const nodeInfo = nodes.map((n) => {
+        const stats = n.stats || {};
+        const players = n.playingPlayers ?? 0;
+        const totalPlayers = n.players?.size ?? 0;
+        const cpu = stats.cpu ? `${(stats.cpu.lavalinkLoad * 100).toFixed(2)}%` : "N/A";
+        const memory = stats.memory ? `${(stats.memory.used / 1024 / 1024).toFixed(0)}MB` : "N/A";
+        const ping = n.ping ?? "N/A";
+        const status = n.connected ? "✅ Online" : "❌ Offline";
+        
+        return `**${n.options.id}** [${status}]\n` +
+               `┕ Host: \`${n.options.host}\`\n` +
+               `┕ Ping: \`${ping}ms\` | Load: \`${cpu}\` | Mem: \`${memory}\`\n` +
+               `┕ Players: \`${players} live / ${totalPlayers} total\``;
+      }).join("\n\n");
+
+      embed.setDescription(nodeInfo || "Gathering node data...");
       await message.channel.send({ embeds: [embed] });
       return;
     }
