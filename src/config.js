@@ -9,7 +9,7 @@ const DEFAULT_CONFIG = {
   log_channel: null,
   payment_methods: ["PayPal", "Bitcoin", "Ethereum", "Bank Transfer"],
   embed_color: "0x00ff9d",
-  footer_text: "ZeroDay Tools",
+  footer_text: "Sinners Music",
   thumbnail_url: "https://i.imgur.com/your_logo.png",
   rules_message_id: null,
   rules_channel: null,

@@ -97,7 +97,7 @@ export async function setupLavalink(client, config) {
       client.guilds.cache.get(guildId)?.shard?.send(payload),
     client: {
       id: client.user?.id ?? "0",
-      username: client.user?.username ?? "ZeroDay Tools",
+      username: client.user?.username ?? "Sinners Music",
     },
     autoSkip: true,
     playerOptions: {
