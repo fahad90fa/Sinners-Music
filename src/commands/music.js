@@ -482,14 +482,6 @@ export const command = {
       if (!player.playing && !player.paused && !player.queue.current) {
         await player.play();
       }
-
-      if (!controlState.has(message.guild.id)) {
-        const msg = await message.channel.send({
-          embeds: [buildNowPlayingEmbed(player)],
-          components: buildButtons(player),
-        });
-        controlState.set(message.guild.id, { channelId: msg.channel.id, messageId: msg.id });
-      }
       return;
     }
 
@@ -710,7 +702,22 @@ export async function register(client) {
     if (player.queue.current?.info?.author) {
       lastTrackAuthor.set(player.guildId, String(player.queue.current?.info?.author));
     }
-    await updateControlMessage(player);
+    
+    // Send a fresh control message for each new track
+    const discordClient = player?.LavalinkManager?.discordClient;
+    if (discordClient) {
+      const channelId = player.textChannelId;
+      const channel = discordClient.channels.cache.get(channelId);
+      if (channel) {
+        const msg = await channel.send({ 
+          embeds: [buildNowPlayingEmbed(player)], 
+          components: buildButtons(player) 
+        }).catch(() => null);
+        if (msg) {
+          controlState.set(player.guildId, { channelId: msg.channel.id, messageId: msg.id });
+        }
+      }
+    }
   });
 
   manager.on("trackEnd", async (player) => {

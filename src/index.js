@@ -52,6 +52,12 @@ client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
   if (!message.content.startsWith(config.prefix)) return;
 
+  // Role Restriction: Only users with the following role ID can use commands
+  const REQUIRED_ROLE_ID = "1260193783484514434";
+  if (!message.member.roles.cache.has(REQUIRED_ROLE_ID)) {
+    return;
+  }
+
   const args = message.content.slice(config.prefix.length).trim().split(/\s+/);
   const name = args.shift()?.toLowerCase();
   if (!name) return;
@@ -68,6 +74,16 @@ client.on("messageCreate", async (message) => {
 });
 
 client.on("interactionCreate", async (interaction) => {
+  if (!interaction.guild) return;
+
+  const REQUIRED_ROLE_ID = "1260193783484514434";
+  if (!interaction.member?.roles.cache.has(REQUIRED_ROLE_ID)) {
+    if (interaction.isRepliable()) {
+      await interaction.reply({ content: "❌ You do not have the required role to use this bot.", flags: 64 });
+    }
+    return;
+  }
+
   for (const mod of client.commandModules) {
     if (typeof mod.handleInteraction === "function") {
       const handled = await mod.handleInteraction({ client, interaction, config });
