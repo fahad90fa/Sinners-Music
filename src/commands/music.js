@@ -85,8 +85,11 @@ function buildAiQuery(title, author, vibe) {
 
 async function ensureAiQueue(player, requester, limit = 3) {
   const currentTrack = player.queue.current;
-  const title = String(currentTrack?.title || currentTrack?.info?.title || lastTrackTitle.get(player.guildId) || "");
-  const author = String(currentTrack?.info?.author || lastTrackAuthor.get(player.guildId) || "");
+  const lastTitle = lastTrackTitle.get(player.guildId) || "";
+  const lastAuthor = lastTrackAuthor.get(player.guildId) || "";
+  
+  const title = String(currentTrack?.title || currentTrack?.info?.title || lastTitle || "");
+  const author = String(currentTrack?.info?.author || lastAuthor || "");
   const vibe = vibeState.get(player.guildId);
   const query = buildAiQuery(title, author, vibe);
   if (!query) return;
@@ -94,11 +97,20 @@ async function ensureAiQueue(player, requester, limit = 3) {
   const result = await player.search({ query }, requester).catch(() => null);
   if (!result?.tracks?.length) return;
 
+  // Build exclusion list including current track, queue, AND previous tracks
   const existing = new Set(
-    [currentTrack, ...(player.queue.tracks || [])]
+    [
+      currentTrack, 
+      ...(player.queue.tracks || []),
+      ...(player.queue.previous || [])
+    ]
       .filter(Boolean)
       .map((track) => normalizeText(track?.title || track?.info?.title))
   );
+
+  // Also exclude the last tracked title manually to be extra safe against loops
+  if (lastTitle) existing.add(normalizeText(lastTitle));
+
   const picks = [];
   for (const track of result.tracks) {
     const key = normalizeText(track?.title || track?.info?.title);
