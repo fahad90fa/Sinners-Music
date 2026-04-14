@@ -525,6 +525,10 @@ export const command = {
     }
 
     if (cmd === "skip" || cmd === "next") {
+      if (!player.queue.tracks.length && autoplayState.get(message.guild.id) !== true && aiModeState.get(message.guild.id) !== true) {
+        await message.channel.send({ embeds: [new EmbedBuilder().setColor(0xff0000).setDescription("❌ No more tracks in the queue to skip to.")] });
+        return;
+      }
       await player.skip();
       await message.channel.send({ embeds: [new EmbedBuilder().setColor(0x00ff9d).setDescription("⏭️ Skipped to the next track.")] });
       return;
@@ -785,6 +789,9 @@ export async function handleInteraction({ client, interaction }) {
     if (player.paused) await player.resume();
     else await player.pause();
   } else if (action === "music_skip") {
+    if (!player.queue.tracks.length && autoplayState.get(interaction.guildId) !== true && aiModeState.get(interaction.guildId) !== true) {
+      return interaction.followUp({ content: "❌ No more tracks in the queue to skip to.", flags: 64 }).catch(() => {});
+    }
     await player.skip();
   } else if (action === "music_stop") {
     await player.stopPlaying(true, false);
