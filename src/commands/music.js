@@ -525,12 +525,31 @@ export const command = {
     }
 
     if (cmd === "skip" || cmd === "next") {
-      if (!player.queue.tracks.length && autoplayState.get(message.guild.id) !== true && aiModeState.get(message.guild.id) !== true) {
+      const hasNext = player.queue.tracks.length > 0;
+      const isAutoplay = autoplayState.get(message.guild.id) === true || aiModeState.get(message.guild.id) === true;
+
+      if (!hasNext && !isAutoplay) {
         await message.channel.send({ embeds: [new EmbedBuilder().setColor(0xff0000).setDescription("❌ No more tracks in the queue to skip to.")] });
         return;
       }
-      await player.skip();
-      await message.channel.send({ embeds: [new EmbedBuilder().setColor(0x00ff9d).setDescription("⏭️ Skipped to the next track.")] });
+
+      try {
+        if (!hasNext && isAutoplay) {
+          await message.channel.send({ embeds: [new EmbedBuilder().setColor(0x00ff9d).setDescription("⏳ Fetching next track via Autoplay...")] });
+          await ensureAiQueue(player, player.queue.current?.requester || message.author, 1);
+        }
+        
+        if (player.queue.tracks.length > 0) {
+          await player.skip();
+          await message.channel.send({ embeds: [new EmbedBuilder().setColor(0x00ff9d).setDescription("⏭️ Skipped to the next track.")] });
+        } else {
+          await player.stopPlaying(true, false);
+          await message.channel.send({ embeds: [new EmbedBuilder().setColor(0x00ff9d).setDescription("⏹️ No tracks found. Stopped playback.")] });
+        }
+      } catch (err) {
+        console.error("Skip error:", err);
+        await message.channel.send("❌ Failed to skip track. Use `!stop` if the player is stuck.");
+      }
       return;
     }
 
@@ -789,10 +808,26 @@ export async function handleInteraction({ client, interaction }) {
     if (player.paused) await player.resume();
     else await player.pause();
   } else if (action === "music_skip") {
-    if (!player.queue.tracks.length && autoplayState.get(interaction.guildId) !== true && aiModeState.get(interaction.guildId) !== true) {
+    const hasNext = player.queue.tracks.length > 0;
+    const isAutoplay = autoplayState.get(interaction.guildId) === true || aiModeState.get(interaction.guildId) === true;
+
+    if (!hasNext && !isAutoplay) {
       return interaction.followUp({ content: "❌ No more tracks in the queue to skip to.", flags: 64 }).catch(() => {});
     }
-    await player.skip();
+
+    try {
+      if (!hasNext && isAutoplay) {
+        await ensureAiQueue(player, player.queue.current?.requester || interaction.user, 1);
+      }
+      
+      if (player.queue.tracks.length > 0) {
+        await player.skip();
+      } else {
+        await player.stopPlaying(true, false);
+      }
+    } catch (err) {
+      console.error("Skip interaction error:", err);
+    }
   } else if (action === "music_stop") {
     await player.stopPlaying(true, false);
   } else if (action === "music_loop") {
